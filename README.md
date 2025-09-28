@@ -1,130 +1,134 @@
-# AWS Project - Build a Full End-to-End Web Application with 7 Services | Step-by-Step Tutorial
+# 🦄 WildRydes: A Serverless Ride Booking Application 
 
-This repo contains the code files used in this [YouTube video](https://youtu.be/K6v6t5z6AsU).
+Traditional ride-booking applications rely on servers, making them **costly to maintain, complex to scale, and harder to secure**.  
 
-## TL;DR
-We're creating a web application for a unicorn ride-sharing service called Wild Rydes (from the original [Amazon workshop](https://aws.amazon.com/serverless-workshops)).  The app uses IAM, Amplify, Cognito, Lambda, API Gateway and DynamoDB, with code stored in GitHub and incorporated into a CI/CD pipeline with Amplify.
+**WildRydes** is a **serverless ride-booking application** built on **AWS Cloud**, designed to solve these challenges.  
+Inspired by the AWS educational project, this implementation demonstrates how to design, deploy, and scale modern **cloud-native applications** without managing servers.
 
-The app will let you create an account and log in, then request a ride by clicking on a map (powered by ArcGIS).  The code can also be extended to build out more functionality.
 
-## Cost
-All services used are eligible for the [AWS Free Tier](https://aws.amazon.com/free/).  Outside of the Free Tier, there may be small charges associated with building the app (less than $1 USD), but charges will continue to incur if you leave the app running.  Please see the end of the YouTube video for instructions on how to delete all resources used in the video.
+---
 
-## The Application Code
-The application code is here in this repository.
+## 🚀 Features :
 
-## The Lambda Function Code
-Here is the code for the Lambda function, originally taken from the [AWS workshop](https://aws.amazon.com/getting-started/hands-on/build-serverless-web-app-lambda-apigateway-s3-dynamodb-cognito/module-3/ ), and updated for Node 20.x:
+- **Frontend Hosting** with AWS Amplify (CI/CD + Global CDN)
+- **User Authentication** via Amazon Cognito
+- **API Management** using Amazon API Gateway
+- **Business Logic** with AWS Lambda
+- **Database** using Amazon DynamoDB
+- **Monitoring & Logging** via Amazon CloudWatch
+- **Secure Access Control** through AWS IAM
+- Fully **scalable**, **cost-efficient**, and **serverless**
 
-```node
-import { randomBytes } from 'crypto';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+---
 
-const client = new DynamoDBClient({});
-const ddb = DynamoDBDocumentClient.from(client);
+## 🛠️ Tech Stack :
 
-const fleet = [
-    { Name: 'Angel', Color: 'White', Gender: 'Female' },
-    { Name: 'Gil', Color: 'White', Gender: 'Male' },
-    { Name: 'Rocinante', Color: 'Yellow', Gender: 'Female' },
-];
+- **Frontend** → HTML, CSS, JavaScript (hosted on Amplify)  
+- **Authentication** → Amazon Cognito  
+- **API** → Amazon API Gateway  
+- **Backend** → AWS Lambda (Node.js/Python)  
+- **Database** → Amazon DynamoDB (NoSQL)  
+- **Monitoring** → Amazon CloudWatch  
+- **Security** → AWS IAM  
 
-export const handler = async (event, context) => {
-    if (!event.requestContext.authorizer) {
-        return errorResponse('Authorization not configured', context.awsRequestId);
-    }
+---
 
-    const rideId = toUrlString(randomBytes(16));
-    console.log('Received event (', rideId, '): ', event);
+## 📐 System Architecture :
 
-    const username = event.requestContext.authorizer.claims['cognito:username'];
-    const requestBody = JSON.parse(event.body);
-    const pickupLocation = requestBody.PickupLocation;
+![WhatsApp Image 2025-09-24 at 21 38 23_8edcf3f7](https://github.com/user-attachments/assets/4efc16e4-16ea-4936-ac35-b18daf07a6aa)
 
-    const unicorn = findUnicorn(pickupLocation);
+---
 
-    try {
-        await recordRide(rideId, username, unicorn);
-        return {
-            statusCode: 201,
-            body: JSON.stringify({
-                RideId: rideId,
-                Unicorn: unicorn,
-                Eta: '30 seconds',
-                Rider: username,
-            }),
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-            },
-        };
-    } catch (err) {
-        console.error(err);
-        return errorResponse(err.message, context.awsRequestId);
-    }
-};
+## ⚙️ Implementation Steps :
 
-function findUnicorn(pickupLocation) {
-    console.log('Finding unicorn for ', pickupLocation.Latitude, ', ', pickupLocation.Longitude);
-    return fleet[Math.floor(Math.random() * fleet.length)];
-}
+1. **Frontend Deployment**  
+   - Build static site using HTML, CSS, JS  
+   - Deploy on AWS Amplify (connected to GitHub for CI/CD)
+     
+     <img width="624" height="169" alt="image" src="https://github.com/user-attachments/assets/259a526f-ea6e-4dab-8760-6d0793b07dc0" />
 
-async function recordRide(rideId, username, unicorn) {
-    const params = {
-        TableName: 'Rides',
-        Item: {
-            RideId: rideId,
-            User: username,
-            Unicorn: unicorn,
-            RequestTime: new Date().toISOString(),
-        },
-    };
-    await ddb.send(new PutCommand(params));
-}
 
-function toUrlString(buffer) {
-    return buffer.toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-}
+2. **Authentication**  
+   - Setup Cognito User Pools for signup/sign-in  
+   - Integrate Cognito tokens for API authorization
+     
+    <img width="624" height="348" alt="image" src="https://github.com/user-attachments/assets/b3894306-476e-4fa5-a869-a3c09922ed6d" />
 
-function errorResponse(errorMessage, awsRequestId) {
-    return {
-        statusCode: 500,
-        body: JSON.stringify({
-            Error: errorMessage,
-            Reference: awsRequestId,
-        }),
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-        },
-    };
-}
-```
 
-## The Lambda Function Test Function
-Here is the code used to test the Lambda function:
+3. **API Development**  
+   - Create RESTful endpoints in API Gateway  
+   - Secure endpoints with Cognito Authorizers
+     
 
-```json
-{
-    "path": "/ride",
-    "httpMethod": "POST",
-    "headers": {
-        "Accept": "*/*",
-        "Authorization": "eyJraWQiOiJLTzRVMWZs",
-        "content-type": "application/json; charset=UTF-8"
-    },
-    "queryStringParameters": null,
-    "pathParameters": null,
-    "requestContext": {
-        "authorizer": {
-            "claims": {
-                "cognito:username": "the_username"
-            }
-        }
-    },
-    "body": "{\"PickupLocation\":{\"Latitude\":47.6174755835663,\"Longitude\":-122.28837066650185}}"
-}
-```
+4. **Backend Logic**  
+   - Implement AWS Lambda functions for ride requests, unicorn assignment, and data validation
+     
+     <img width="624" height="108" alt="image" src="https://github.com/user-attachments/assets/d01b765d-e8f9-4631-a7d4-cc95d791933d" />
+
+
+5. **Database Configuration**  
+   - Create DynamoDB table to store ride data (UserID, Pickup, Drop, Status)
+     
+     <img width="624" height="285" alt="image" src="https://github.com/user-attachments/assets/c77d85d0-3e7d-423d-af62-7cab8857c2ae" />
+
+
+6. **Monitoring & Security**  
+   - Enable CloudWatch for logs & dashboards  
+   - Configure IAM policies (principle of least privilege)  
+
+---
+
+## 📊 Results
+
+-  Fully serverless application with no server management  
+-  Secure user authentication using Cognito  
+-  Scalable backend with Lambda functions  
+-  Fast & reliable data handling via DynamoDB  
+-  Real-time monitoring and debugging with CloudWatch  
+
+---
+
+## 🖼️ Screenshots:
+
+
+- Home Screen :
+      <img width="975" height="490" alt="image" src="https://github.com/user-attachments/assets/a4d6409e-852c-497c-8500-e24b664915dc" />
+ 
+- Login / Signup Screen :
+    <img width="975" height="483" alt="image" src="https://github.com/user-attachments/assets/aff2e8a1-36f8-4931-84b2-3ad27cbe0a76" />
+
+- DynamoDB Ride Entries :
+    <img width="975" height="469" alt="image" src="https://github.com/user-attachments/assets/a048ff6d-4986-43c5-83ff-f963098aaf92" />
+
+- API Gateway :
+      <img width="975" height="465" alt="image" src="https://github.com/user-attachments/assets/23bdeb19-62e0-4b94-bc8d-1ccff35e3270" />
+ 
+ 
+- Entire Website :  
+   [![GitHub](https://img.shields.io/badge/View%20Website-181717?logo=github&logoColor=white)](https://drive.google.com/file/d/1v_qDdYTgFkvDeopQlrGwJH4s1VyJ6SyP/view?usp=sharing)
+
+- Video :  
+  [![Watch Video](https://img.shields.io/badge/Watch-Video-red?logo=youtube&logoColor=white)](https://drive.google.com/file/d/1iT7Najuux7olpx9Oz3OXy9w1nO_yQ7mq/view?usp=sharing)
+
+  
+---
+
+## ⚡ Challenges Faced
+
+- Integrating Cognito authentication with frontend  
+- Configuring IAM roles with least privilege  
+- Debugging Lambda functions via CloudWatch logs  
+- Designing efficient NoSQL schema for DynamoDB  
+
+---
+
+## 🔮 Future Enhancements
+
+- Location-based ride matching (Amazon Location Service)  
+- Payment gateway integration (Stripe/PayPal)  
+- Real-time notifications (SNS/SQS)  
+- Analytics dashboards (QuickSight)  
+- Mobile app support (Flutter/React Native)  
+- Advanced security (MFA, WAF, encryption)  
+- Multi-region deployment with CloudFront  
 
